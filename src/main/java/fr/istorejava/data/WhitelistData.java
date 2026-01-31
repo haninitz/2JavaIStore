@@ -1,4 +1,4 @@
 package fr.istorejava.data;
 
-public class StoreData {
+public class WhitelistData {
 }

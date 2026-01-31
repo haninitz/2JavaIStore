@@ -1,53 +1,148 @@
 package fr.istorejava.ui;
 
+import fr.istorejava.data.UserData;
+
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
 
-public class SignupWindow extends JFrame {
+public class SignUp extends JFrame {
 
+    private JTextField nameField;
     private JTextField emailField;
-    private JTextField pseudoField;
     private JPasswordField passwordField;
-    private JButton createButton;
-    private JLabel messageLabel;
 
-    public SignupWindow() {
-        setTitle("Créer un compte - iStore");
-        setSize(400, 300);
+    public SignUp() {
+
+        setTitle("Sign Up");
+        setSize(900, 500);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
-        setLayout(new GridLayout(6, 1));
+        setLayout(new GridLayout(1, 2));
+
+        // ===== LEFT PANEL =====
+        JPanel leftPanel = new JPanel();
+        leftPanel.setBackground(new Color(0, 102, 102));
+        leftPanel.setLayout(new BorderLayout());
+
+        JLabel companyLabel = new JLabel("COMPANY NAME", SwingConstants.CENTER);
+        companyLabel.setForeground(Color.WHITE);
+        companyLabel.setFont(new Font("Arial", Font.BOLD, 22));
+
+        JLabel copyright = new JLabel(
+                "copyright © company name All rights reserved",
+                SwingConstants.CENTER
+        );
+        copyright.setForeground(Color.LIGHT_GRAY);
+        copyright.setFont(new Font("Arial", Font.PLAIN, 10));
+
+        leftPanel.add(companyLabel, BorderLayout.CENTER);
+        leftPanel.add(copyright, BorderLayout.SOUTH);
+
+        // ===== RIGHT PANEL =====
+        JPanel rightPanel = new JPanel();
+        rightPanel.setBackground(Color.WHITE);
+        rightPanel.setLayout(null);
+
+        JLabel title = new JLabel("SIGN UP");
+        title.setFont(new Font("Arial", Font.BOLD, 24));
+        title.setBounds(60, 40, 200, 30);
+        rightPanel.add(title);
+
+        JLabel nameLabel = new JLabel("Full name");
+        nameLabel.setBounds(60, 90, 200, 20);
+        rightPanel.add(nameLabel);
+
+        nameField = new JTextField();
+        nameField.setBounds(60, 115, 250, 30);
+        rightPanel.add(nameField);
+
+        JLabel emailLabel = new JLabel("Email");
+        emailLabel.setBounds(60, 160, 200, 20);
+        rightPanel.add(emailLabel);
 
         emailField = new JTextField();
-        pseudoField = new JTextField();
+        emailField.setBounds(60, 185, 250, 30);
+        rightPanel.add(emailField);
+
+        JLabel passwordLabel = new JLabel("Password");
+        passwordLabel.setBounds(60, 230, 200, 20);
+        rightPanel.add(passwordLabel);
+
         passwordField = new JPasswordField();
-        createButton = new JButton("Créer");
-        messageLabel = new JLabel("", SwingConstants.CENTER);
+        passwordField.setBounds(60, 255, 250, 30);
+        rightPanel.add(passwordField);
 
-        add(new JLabel("Email:"));
-        add(emailField);
-        add(new JLabel("Pseudo:"));
-        add(pseudoField);
-        add(new JLabel("Mot de passe:"));
-        add(passwordField);
-        add(createButton);
-        add(messageLabel);
+        JButton signupButton = new JButton("Sign Up");
+        signupButton.setBounds(60, 310, 120, 35);
+        signupButton.setBackground(new Color(0, 102, 102));
+        signupButton.setForeground(Color.WHITE);
+        signupButton.setFocusPainted(false);
+        rightPanel.add(signupButton);
 
-        createButton.addActionListener((ActionEvent e) -> {
-            String email = emailField.getText();
-            String pseudo = pseudoField.getText();
-            String password = new String(passwordField.getPassword());
+        JLabel loginLabel = new JLabel("I've an account");
+        loginLabel.setBounds(60, 360, 100, 20);
+        rightPanel.add(loginLabel);
 
-            // TODO: Vérifier si email whitelisté dans MySQL
-            // TODO: Hash mot de passe et insérer dans la table users
-            boolean success = true; // remplacer par vérification
+        JButton loginButton = new JButton("Login");
+        loginButton.setBounds(165, 355, 80, 30);
+        rightPanel.add(loginButton);
 
-            if (success) {
-                messageLabel.setText("Compte créé avec succès !");
-            } else {
-                messageLabel.setText("Erreur : email non whitelisté ou déjà utilisé");
-            }
+        // ===== ACTIONS =====
+
+        // Création du compte
+        signupButton.addActionListener(e -> createAccount());
+
+        // Aller vers Login
+        loginButton.addActionListener(e -> {
+            new Login().setVisible(true);
+            dispose();
         });
+
+        // ===== ADD PANELS =====
+        add(leftPanel);
+        add(rightPanel);
+    }
+
+    // ===== LOGIQUE SIGN UP =====
+    private void createAccount() {
+
+        String name = nameField.getText().trim();
+        String email = emailField.getText().trim();
+        String password = new String(passwordField.getPassword());
+
+        // Vérification des champs
+        if (name.isEmpty() || email.isEmpty() || password.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                    "Veuillez remplir tous les champs",
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try {
+            // Création du compte via UserData
+            UserData.createUser(email, name, password, "user"); // role par défaut "user"
+
+            JOptionPane.showMessageDialog(this,
+                    "Compte créé avec succès !",
+                    "Succès",
+                    JOptionPane.INFORMATION_MESSAGE);
+
+            // Aller vers Login après création
+            new Login().setVisible(true);
+            dispose();
+
+        } catch (RuntimeException ex) {
+            // Si email déjà utilisé
+            JOptionPane.showMessageDialog(this,
+                    ex.getMessage(),
+                    "Erreur",
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    // ===== MAIN POUR TEST =====
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(() -> new SignUp().setVisible(true));
     }
 }

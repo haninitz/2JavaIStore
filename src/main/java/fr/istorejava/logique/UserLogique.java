@@ -10,7 +10,6 @@ public class UserLogique {
 
     private UserLogique() {}
 
-    /** Lecture autorisée pour tout le monde (sans mot de passe évidemment). */
     public static List<UserModel> listUsers() {
         List<UserModel> out = new ArrayList<>();
         for (UserData u : UserData.getAllUsers()) {

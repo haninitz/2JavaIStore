@@ -1,6 +1,7 @@
 package fr.istorejava.ui;
 
 import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -10,56 +11,147 @@ import fr.istorejava.data.StoreData;
 
 class EmployeeDashboard extends JFrame {
 
+    private CardLayout cardLayout;
+    private JPanel contentPanel;
+
     public EmployeeDashboard(UserData employee, StoreData store) {
         setTitle("Employee Dashboard - " + employee.getPseudo());
-        setSize(900, 600);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setSize(1000, 600);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
-        getContentPane().setBackground(new Color(245, 245, 245));
 
-        // ===== TITLE =====
-        JLabel title = new JLabel("EMPLOYEE DASHBOARD", SwingConstants.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 28));
-        title.setForeground(new Color(0, 102, 102));
-        title.setBorder(BorderFactory.createEmptyBorder(30, 0, 10, 0));
-        add(title, BorderLayout.NORTH);
+        // ===== TOP BAR =====
+        JPanel topBar = new JPanel(new BorderLayout());
+        topBar.setBackground(new Color(0, 102, 102));
+        topBar.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        // ===== STORE LABEL =====
-        JLabel storeLabel = new JLabel("Magasin : " + store.getName(), SwingConstants.CENTER);
-        storeLabel.setFont(new Font("Arial", Font.PLAIN, 20));
-        storeLabel.setForeground(new Color(80, 80, 80));
-        storeLabel.setBorder(BorderFactory.createEmptyBorder(10, 0, 30, 0));
-        add(storeLabel, BorderLayout.CENTER);
+        JLabel title = new JLabel("EMPLOYEE DASHBOARD");
+        title.setForeground(Color.WHITE);
+        title.setFont(new Font("Arial", Font.BOLD, 22));
 
-        // ===== BUTTONS PANEL =====
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setBackground(new Color(245, 245, 245));
-        buttonPanel.setLayout(new GridLayout(2, 1, 0, 20));
+        JButton logoutBtn = new JButton("Déconnexion");
+        logoutBtn.setFocusPainted(false);
 
-        JButton btnViewInventory = createButton("Voir l'inventaire");
-        JButton btnUpdateStock = createButton("Modifier le stock");
+        topBar.add(title, BorderLayout.WEST);
+        topBar.add(logoutBtn, BorderLayout.EAST);
 
-        buttonPanel.add(btnViewInventory);
-        buttonPanel.add(btnUpdateStock);
+        add(topBar, BorderLayout.NORTH);
 
-        JPanel centerPanel = new JPanel(new GridBagLayout());
-        centerPanel.setBackground(new Color(245, 245, 245));
-        centerPanel.add(buttonPanel);
+        // ===== SIDE MENU =====
+        JPanel sideMenu = new JPanel();
+        sideMenu.setLayout(new GridLayout(3, 1, 0, 15));
+        sideMenu.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+        sideMenu.setBackground(new Color(240, 240, 240));
 
-        add(centerPanel, BorderLayout.CENTER);
+        JButton btnInventory = new JButton("Inventaire");
+        JButton btnStock = new JButton("Gestion du stock");
+        JButton btnEmployees = new JButton("Employés du store");
+
+        sideMenu.add(btnInventory);
+        sideMenu.add(btnStock);
+        sideMenu.add(btnEmployees);
+
+        add(sideMenu, BorderLayout.WEST);
+
+        // ===== CONTENT =====
+        cardLayout = new CardLayout();
+        contentPanel = new JPanel(cardLayout);
+
+        contentPanel.add(createInventoryPanel(), "INVENTORY");
+        contentPanel.add(createStockPanel(), "STOCK");
+        contentPanel.add(createEmployeesPanel(), "EMPLOYEES");
+
+        add(contentPanel, BorderLayout.CENTER);
+
+        // ===== ACTIONS (UI ONLY) =====
+        btnInventory.addActionListener(e -> cardLayout.show(contentPanel, "INVENTORY"));
+        btnStock.addActionListener(e -> cardLayout.show(contentPanel, "STOCK"));
+        btnEmployees.addActionListener(e -> cardLayout.show(contentPanel, "EMPLOYEES"));
+
+        setVisible(true);
     }
 
-    // Même méthode pour créer un bouton esthétique
+    // ===== INVENTORY VIEW =====
+    private JPanel createInventoryPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel label = new JLabel("Inventaire du store");
+        label.setFont(new Font("Arial", Font.BOLD, 18));
+
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{
+                        {1, "iPhone 15", 999.99, 12},
+                        {2, "AirPods Pro", 279.99, 30}
+                },
+                new String[]{"ID", "Nom", "Prix (€)", "Quantité"}
+        ));
+
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+
+        return panel;
+    }
+
+    // ===== STOCK MANAGEMENT =====
+    private JPanel createStockPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel label = new JLabel("Modifier le stock");
+        label.setFont(new Font("Arial", Font.BOLD, 18));
+
+        JTable table = new JTable(new DefaultTableModel(
+                new Object[][]{
+                        {1, "iPhone 15", 12},
+                        {2, "AirPods Pro", 30}
+                },
+                new String[]{"ID", "Nom", "Quantité"}
+        ));
+
+        JPanel buttons = new JPanel();
+        JButton btnPlus = new JButton("+");
+        JButton btnMinus = new JButton("-");
+
+        buttons.add(btnPlus);
+        buttons.add(btnMinus);
+
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(buttons, BorderLayout.SOUTH);
+
+        return panel;
+    }
+
+    // ===== EMPLOYEES LIST =====
+    private JPanel createEmployeesPanel() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        JLabel label = new JLabel("Employés ayant accès au store");
+        label.setFont(new Font("Arial", Font.BOLD, 18));
+
+        JList<String> list = new JList<>(new String[]{
+                "Alice (employee)",
+                "Bob (employee)",
+                "Admin (admin)"
+        });
+
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(new JScrollPane(list), BorderLayout.CENTER);
+
+        return panel;
+    }
+
     private JButton createButton(String text) {
         JButton button = new JButton(text);
-        button.setFont(new Font("Arial", Font.BOLD, 18));
+        button.setFont(new Font("Arial", Font.BOLD, 14));
         button.setBackground(new Color(0, 102, 102));
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
-        button.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+        button.setBorder(BorderFactory.createEmptyBorder(8, 15, 8, 15));
 
-        // Hover effect
         button.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseEntered(MouseEvent e) {
@@ -73,5 +165,23 @@ class EmployeeDashboard extends JFrame {
         });
 
         return button;
+    }
+
+
+    // ===== Surcharge : bouton avec ActionListener =====
+    private JButton createButton(String text, java.awt.event.ActionListener action) {
+        JButton button = createButton(text); // style identique
+        button.addActionListener(action);     // ajoute l'action
+        return button;
+    }
+
+    // ===== Déconnexion =====
+    private void logout() {
+        int confirm = JOptionPane.showConfirmDialog(this, "Voulez-vous vraiment vous déconnecter ?", "Déconnexion", JOptionPane.YES_NO_OPTION);
+        if(confirm == JOptionPane.YES_OPTION) {
+            dispose(); // ferme le dashboard
+            // ici tu peux rouvrir la fenêtre de login si tu en as une
+            // new LoginWindow().setVisible(true);
+        }
     }
 }

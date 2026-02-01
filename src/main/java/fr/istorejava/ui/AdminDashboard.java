@@ -32,6 +32,9 @@ public class AdminDashboard extends JFrame {
         title.setBorder(BorderFactory.createEmptyBorder(20, 0, 20, 0));
         add(title, BorderLayout.NORTH);
 
+        // Ajouter le topPanel à la fenêtre
+        add(topPanel, BorderLayout.NORTH);
+
         // ===== MAIN PANEL =====
         JPanel mainPanel = new JPanel();
         mainPanel.setBackground(new Color(245, 245, 245));
@@ -149,7 +152,8 @@ public class AdminDashboard extends JFrame {
         if(confirm == JOptionPane.YES_OPTION) {
             dispose(); // ferme le dashboard
             // ici tu peux rouvrir la fenêtre de login si tu en as une
-            // new LoginWindow().setVisible(true);
+            new Login().setVisible(true);
         }
     }
+
 }

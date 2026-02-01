@@ -30,11 +30,11 @@ class EmployeeDashboard extends JFrame {
         title.setForeground(Color.WHITE);
         title.setFont(new Font("Arial", Font.BOLD, 22));
 
-        JButton logoutBtn = new JButton("Déconnexion");
-        logoutBtn.setFocusPainted(false);
+        // Logout Button
+        JButton logoutButton = createButton("Se déconnecter", e -> logout());
 
         topBar.add(title, BorderLayout.WEST);
-        topBar.add(logoutBtn, BorderLayout.EAST);
+        topBar.add(logoutButton, BorderLayout.EAST);
 
         add(topBar, BorderLayout.NORTH);
 
@@ -181,7 +181,7 @@ class EmployeeDashboard extends JFrame {
         if(confirm == JOptionPane.YES_OPTION) {
             dispose(); // ferme le dashboard
             // ici tu peux rouvrir la fenêtre de login si tu en as une
-            // new LoginWindow().setVisible(true);
+            new Login().setVisible(true);
         }
     }
 }

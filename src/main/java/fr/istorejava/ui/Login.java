@@ -1,8 +1,15 @@
 package fr.istorejava.ui;
 
 import fr.istorejava.data.UserData;
+
+
 import javax.swing.*;
 import java.awt.*;
+import fr.istorejava.data.UserData;
+import fr.istorejava.logique.Authentication;
+import fr.istorejava.objets.UserModel;
+import fr.istorejava.db_connection.Session;
+
 
 public class Login extends JFrame {
 
@@ -80,7 +87,34 @@ public class Login extends JFrame {
         // ===== ACTIONS =====
 
         // Connexion
-        loginButton.addActionListener(e -> login());
+        loginButton.addActionListener(e -> {
+            String email = emailField.getText().trim();
+            String password = new String(passwordField.getPassword());
+
+            if (email.isBlank() || password.isBlank()) {
+                JOptionPane.showMessageDialog(this, "Veuillez remplir email et mot de passe.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            try {
+                // ✅ Login via LOGIQUE (vérifie whitelist + password hash)
+                UserModel userModel = Authentication.login(email, password);
+
+                // ✅ On récupère le UserData (car ton UI utilise UserData)
+                UserData userData = UserData.getUserByEmail(userModel.getEmail());
+
+                // (Optionnel) session
+                try { Session.setCurrentUser(userData); } catch (Exception ignored) {}
+
+                // ✅ Aller vers Home
+                new Home(userData, null).setVisible(true);
+                dispose();
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
 
         // Aller vers SignUp
         signupButton.addActionListener(e -> {

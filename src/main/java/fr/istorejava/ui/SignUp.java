@@ -1,6 +1,7 @@
 package fr.istorejava.ui;
 
 import fr.istorejava.data.UserData;
+import fr.istorejava.logique.Authentication;
 
 import javax.swing.*;
 import java.awt.*;
@@ -90,7 +91,32 @@ public class SignUp extends JFrame {
         // ===== ACTIONS =====
 
         // Création du compte
-        signupButton.addActionListener(e -> createAccount());
+        signupButton.addActionListener(e -> {
+            String pseudo = nameField.getText().trim();
+            String email = emailField.getText().trim();
+            String password = new String(passwordField.getPassword());
+
+            if (pseudo.isBlank() || email.isBlank() || password.isBlank()) {
+                JOptionPane.showMessageDialog(this, "Veuillez remplir tous les champs.", "Info", JOptionPane.INFORMATION_MESSAGE);
+                return;
+            }
+
+            try {
+                // ✅ Signup via LOGIQUE (whitelist + hash + insert DB)
+                Authentication.signUp(pseudo, email, password);
+
+                JOptionPane.showMessageDialog(this,
+                        "Compte créé ✅\nVous pouvez maintenant vous connecter.",
+                        "Succès",
+                        JOptionPane.INFORMATION_MESSAGE);
+
+                new Login().setVisible(true);
+                dispose();
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            }
+        });
 
         // Aller vers Login
         loginButton.addActionListener(e -> {

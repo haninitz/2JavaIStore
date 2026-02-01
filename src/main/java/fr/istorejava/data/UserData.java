@@ -1,7 +1,8 @@
 package fr.istorejava.data;
 
+import fr.istorejava.security.Password;
 import fr.istorejava.db_connection.DBConnection;
-import org.mindrot.jbcrypt.BCrypt;
+
 
 import java.sql.*;
 
@@ -38,7 +39,7 @@ public class UserData {
 
     // ===== BCrypt =====
     public static String hashPassword(String password) {
-        return BCrypt.hashpw(password, BCrypt.gensalt());
+        return Password.hash(password);
     }
 
     // ===== CRUD (DB) =====
@@ -221,7 +222,7 @@ public class UserData {
 
     // ===== AUTH =====
     public boolean checkPassword(String password) {
-        return BCrypt.checkpw(password, this.passwordHash);
+        return Password.verify(password, this.passwordHash);
     }
 
     // ===== GETTERS =====

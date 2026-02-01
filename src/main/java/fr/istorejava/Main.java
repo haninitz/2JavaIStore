@@ -9,6 +9,7 @@ public class Main {
         SwingUtilities.invokeLater(() -> {
             new Login().setVisible(true);
         });
+
     }
 
 }

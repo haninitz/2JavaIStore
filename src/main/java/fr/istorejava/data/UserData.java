@@ -1,11 +1,25 @@
 package fr.istorejava.data;
 
-import java.security.MessageDigest;
+import fr.istorejava.db_connection.DBConnection;
+import org.mindrot.jbcrypt.BCrypt;
+
+import java.sql.*;
+
 import java.util.*;
 
 public class UserData {
 
-    private static int nextId = 1;
+    private static String normalizeRole(String role) {
+        if (role == null || role.isBlank()) return "EMPLOYEE";
+        String r = role.trim().toUpperCase();
+        if (r.equals("USER")) return "EMPLOYEE";
+        if (r.equals("EMPLOYEE") || r.equals("ADMIN")) return r;
+        // compatibility with old UI passing 'user'/'admin'
+        if (r.equals("ADMIN")) return "ADMIN";
+        if (r.equals("USER")) return "EMPLOYEE";
+        return "EMPLOYEE";
+    }
+
 
     private int id;
     private String email;
@@ -13,95 +27,206 @@ public class UserData {
     private String passwordHash;
     private String role;
 
-    // Stockage de tous les utilisateurs
-    private static final HashMap<Integer, UserData> usersById = new HashMap<>();
-    private static final HashMap<String, UserData> usersByEmail = new HashMap<>();
-
-    // ===== CONSTRUCTEUR =====
-    private UserData(String email, String pseudo, String password, String role) {
-        this.id = nextId++;
+    // ===== CONSTRUCTEUR (public pour mapping DB) =====
+    public UserData(int id, String email, String pseudo, String passwordHash, String role) {
+        this.id = id;
         this.email = email;
         this.pseudo = pseudo;
-        this.passwordHash = hashPassword(password);
+        this.passwordHash = passwordHash;
         this.role = role;
     }
 
-    // ===== HASH PASSWORD =====
+    // ===== BCrypt =====
     public static String hashPassword(String password) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] hash = md.digest(password.getBytes());
-            StringBuilder sb = new StringBuilder();
-            for (byte b : hash) sb.append(String.format("%02x", b));
-            return sb.toString();
-        } catch (Exception e) {
+        return BCrypt.hashpw(password, BCrypt.gensalt());
+    }
+
+    // ===== CRUD (DB) =====
+
+    // Create (par défaut EMPLOYEE)
+    public static UserData createUser(String email, String pseudo, String password, String role) {
+        if (getUserByEmail(email) != null) {
+            throw new RuntimeException("Email déjà utilisé");
+        }
+
+
+        if (!WhitelistData.isWhitelisted(email)) {
+            throw new RuntimeException("Email non autorisé (whitelist)");
+        }
+// Option rapide : si c'est le premier user en DB -> ADMIN
+        // (reproduit ton ancien comportement)
+        if (countUsers() == 0) {
+            role = "ADMIN";
+        }
+
+        String hash = hashPassword(password);
+
+        String sql = "INSERT INTO users(email, pseudo, password_hash, role) VALUES (?, ?, ?, ?)";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+            ps.setString(1, email);
+            ps.setString(2, pseudo);
+            ps.setString(3, hash);
+            ps.setString(4, normalizeRole(role));
+
+            ps.executeUpdate();
+
+            ResultSet keys = ps.getGeneratedKeys();
+            int newId = -1;
+            if (keys.next()) newId = keys.getInt(1);
+
+            return new UserData(newId, email, pseudo, hash, normalizeRole(role));
+
+        } catch (SQLException e) {
             throw new RuntimeException(e);
         }
     }
 
-    // ===== CRUD =====
-
-    // Create
-    public static UserData createUser(String email, String pseudo, String password, String role) {
-        if (usersByEmail.containsKey(email))
-            throw new RuntimeException("Email déjà utilisé");
-
-        // Si c'est le premier utilisateur, le rôle est forcé à "admin"
-        if (usersById.isEmpty()) {
-            role = "admin";
-        }
-
-        UserData user = new UserData(email, pseudo, password, role);
-        usersById.put(user.id, user);
-        usersByEmail.put(email, user);
-        return user;
-    }
-
     // Read all
     public static List<UserData> getAllUsers() {
-        return new ArrayList<>(usersById.values());
+        String sql = "SELECT id, email, pseudo, password_hash, role FROM users";
+        List<UserData> list = new ArrayList<>();
+
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ResultSet rs = ps.executeQuery();
+            while (rs.next()) {
+                list.add(new UserData(
+                        rs.getInt("id"),
+                        rs.getString("email"),
+                        rs.getString("pseudo"),
+                        rs.getString("password_hash"),
+                        rs.getString("role")
+                ));
+            }
+            return list;
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Read by ID
     public static UserData getUserById(int id) {
-        return usersById.get(id);
+        String sql = "SELECT id, email, pseudo, password_hash, role FROM users WHERE id = ?";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, id);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new UserData(
+                        rs.getInt("id"),
+                        rs.getString("email"),
+                        rs.getString("pseudo"),
+                        rs.getString("password_hash"),
+                        rs.getString("role")
+                );
+            }
+            return null;
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Read by email
     public static UserData getUserByEmail(String email) {
-        return usersByEmail.get(email);
+        String sql = "SELECT id, email, pseudo, password_hash, role FROM users WHERE email = ?";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                return new UserData(
+                        rs.getInt("id"),
+                        rs.getString("email"),
+                        rs.getString("pseudo"),
+                        rs.getString("password_hash"),
+                        rs.getString("role")
+                );
+            }
+            return null;
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Update
     public void update(String email, String pseudo, String password, String role) {
-        if (!this.email.equals(email) && usersByEmail.containsKey(email)) {
+        // si l'email change, vérifier l'unicité
+        if (!this.email.equals(email) && getUserByEmail(email) != null) {
             throw new RuntimeException("Email déjà utilisé");
         }
-        usersByEmail.remove(this.email);
-        this.email = email;
-        this.pseudo = pseudo;
+
+        String newHash = this.passwordHash;
         if (password != null && !password.isEmpty()) {
-            this.passwordHash = hashPassword(password);
+            newHash = hashPassword(password);
         }
-        this.role = role;
-        usersByEmail.put(email, this);
+
+        String sql = "UPDATE users SET email=?, pseudo=?, password_hash=?, role=? WHERE id=?";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setString(1, email);
+            ps.setString(2, pseudo);
+            ps.setString(3, newHash);
+            ps.setString(4, role == null ? this.role : normalizeRole(role));
+            ps.setInt(5, this.id);
+
+            ps.executeUpdate();
+
+            // sync objet
+            this.email = email;
+            this.pseudo = pseudo;
+            this.passwordHash = newHash;
+            this.role = (role == null ? this.role : normalizeRole(role));
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // Delete
     public void delete() {
-        usersById.remove(this.id);
-        usersByEmail.remove(this.email);
+        String sql = "DELETE FROM users WHERE id = ?";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ps.setInt(1, this.id);
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static int countUsers() {
+        String sql = "SELECT COUNT(*) FROM users";
+        try (Connection c = DBConnection.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+
+            ResultSet rs = ps.executeQuery();
+            rs.next();
+            return rs.getInt(1);
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     // ===== AUTH =====
     public boolean checkPassword(String password) {
-        return hashPassword(password).equals(this.passwordHash);
+        return BCrypt.checkpw(password, this.passwordHash);
     }
 
     // ===== GETTERS =====
     public int getId() { return id; }
     public String getEmail() { return email; }
-    public String getPseudo() { return pseudo; }
-    public String getRole() { return role; }
-
+    public String getPseudo() { return (pseudo == null || pseudo.isBlank()) ? email : pseudo; }
+    public String getRole() { return role == null ? null : role.toLowerCase(); }
 }

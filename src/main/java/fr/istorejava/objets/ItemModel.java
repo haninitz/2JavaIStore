@@ -1,4 +1,4 @@
 package fr.istorejava.objets;
 
-public class Item {
+public class ItemModel {
 }

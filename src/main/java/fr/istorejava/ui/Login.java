@@ -1,7 +1,6 @@
 package fr.istorejava.ui;
 
 import fr.istorejava.data.UserData;
-
 import javax.swing.*;
 import java.awt.*;
 

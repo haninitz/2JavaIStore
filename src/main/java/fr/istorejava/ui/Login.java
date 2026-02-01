@@ -23,12 +23,12 @@ public class Login extends JFrame {
         leftPanel.setBackground(new Color(0, 102, 102));
         leftPanel.setLayout(new BorderLayout());
 
-        JLabel companyLabel = new JLabel("COMPANY NAME", SwingConstants.CENTER);
+        JLabel companyLabel = new JLabel("SupIStore", SwingConstants.CENTER);
         companyLabel.setForeground(Color.WHITE);
         companyLabel.setFont(new Font("Arial", Font.BOLD, 22));
 
         JLabel copyright = new JLabel(
-                "copyright © company name All rights reserved",
+                "copyright © SupIStore All rights reserved",
                 SwingConstants.CENTER
         );
         copyright.setForeground(Color.LIGHT_GRAY);

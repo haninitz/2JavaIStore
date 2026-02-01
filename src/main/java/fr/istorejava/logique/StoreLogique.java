@@ -1,4 +1,4 @@
 package fr.istorejava.logique;
 
-public class User {
+public class StoreLogique {
 }

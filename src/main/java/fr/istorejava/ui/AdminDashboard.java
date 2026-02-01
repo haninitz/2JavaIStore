@@ -16,6 +16,15 @@ public class AdminDashboard extends JFrame {
         setLayout(new BorderLayout());
         getContentPane().setBackground(new Color(245, 245, 245));
 
+        // ===== TOP PANEL : LOGOUT BUTTON + TITLE =====
+        JPanel topPanel = new JPanel(new BorderLayout());
+        topPanel.setBackground(new Color(245, 245, 245));
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+
+        // Logout Button
+        JButton logoutButton = createButton("Se déconnecter", e -> logout());
+        topPanel.add(logoutButton, BorderLayout.WEST);
+
         // ===== TITLE =====
         JLabel title = new JLabel("ADMIN DASHBOARD", SwingConstants.CENTER);
         title.setFont(new Font("Arial", Font.BOLD, 32));
@@ -127,4 +136,20 @@ public class AdminDashboard extends JFrame {
         return button;
     }
 
+    // ===== Surcharge : bouton avec ActionListener =====
+    private JButton createButton(String text, java.awt.event.ActionListener action) {
+        JButton button = createButton(text); // style identique
+        button.addActionListener(action);     // ajoute l'action
+        return button;
+    }
+
+    // ===== Déconnexion =====
+    private void logout() {
+        int confirm = JOptionPane.showConfirmDialog(this, "Voulez-vous vraiment vous déconnecter ?", "Déconnexion", JOptionPane.YES_NO_OPTION);
+        if(confirm == JOptionPane.YES_OPTION) {
+            dispose(); // ferme le dashboard
+            // ici tu peux rouvrir la fenêtre de login si tu en as une
+            // new LoginWindow().setVisible(true);
+        }
+    }
 }

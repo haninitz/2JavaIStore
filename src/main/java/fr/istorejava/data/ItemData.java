@@ -28,7 +28,7 @@ public class ItemData {
     public double getPrice() { return price; }
     public int getStock() { return stock; }
 
-    // ===== Admin CRUD =====
+    // ===== Admin CRUD ===
     public static ItemData createItem(String name, double price) {
         String sql = "INSERT INTO items(name, price) VALUES (?, ?)";
         try (Connection c = DBConnection.getConnection();

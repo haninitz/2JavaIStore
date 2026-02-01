@@ -5,6 +5,9 @@ import java.awt.*;
 import fr.istorejava.data.UserData;
 import fr.istorejava.data.StoreData;
 import fr.istorejava.ui.AdminDashboard;
+import fr.istorejava.logique.StoreLogique;
+import java.util.List;
+
 
 
 public class Home extends JFrame {
@@ -58,11 +61,49 @@ public class Home extends JFrame {
         rightPanel.add(dashboardButton);
 
         dashboardButton.addActionListener(e -> {
-            if (user.getRole().equals("admin")) {
+            if ("admin".equalsIgnoreCase(user.getRole())) {
                 new AdminDashboard(user).setVisible(true);
-            } else {
-                // Passer le store valide à EmployeeDashboard
-                new EmployeeDashboard(user, store).setVisible(true);
+                dispose();
+                return;
+            }
+
+            // Employee / user : choisir un store accessible
+            try {
+                List<StoreData> stores = StoreLogique.listStores(user); // logique => DB
+
+                if (stores.isEmpty()) {
+                    JOptionPane.showMessageDialog(this,
+                            "Aucun magasin n'est associé à votre compte.",
+                            "Info",
+                            JOptionPane.INFORMATION_MESSAGE);
+                    return;
+                }
+
+                // options pour JOptionPane
+                String[] options = stores.stream().map(StoreData::getName).toArray(String[]::new);
+
+                String choice = (String) JOptionPane.showInputDialog(
+                        this,
+                        "Choisissez un magasin :",
+                        "Sélection magasin",
+                        JOptionPane.QUESTION_MESSAGE,
+                        null,
+                        options,
+                        options[0]
+                );
+
+                if (choice == null) return;
+
+                StoreData selected = stores.stream()
+                        .filter(s -> s.getName().equals(choice))
+                        .findFirst()
+                        .orElse(stores.get(0));
+
+                new EmployeeDashboard(user, selected).setVisible(true);
+                dispose();
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
             }
         });
 

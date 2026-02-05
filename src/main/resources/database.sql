@@ -51,6 +51,6 @@ CREATE TABLE store_employees (
   FOREIGN KEY (store_id) REFERENCES stores(id) ON DELETE CASCADE,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-
+ b
 -- Example whitelist (for quick tests)
 INSERT INTO email_whitelist(email) VALUES ('admin@istore.com'), ('emp@istore.com');

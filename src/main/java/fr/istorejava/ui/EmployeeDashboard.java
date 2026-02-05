@@ -1,20 +1,49 @@
 package fr.istorejava.ui;
 
+import fr.istorejava.data.ItemData;
+import fr.istorejava.data.StoreData;
+import fr.istorejava.data.UserData;
+import fr.istorejava.logique.InventoryLogique;
+import fr.istorejava.logique.StoreLogique;
+
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
-import fr.istorejava.data.UserData;
-import fr.istorejava.data.StoreData;
+import java.util.ArrayList;
+import java.util.List;
 
+public class EmployeeDashboard extends JFrame {
 
-class EmployeeDashboard extends JFrame {
+    private final UserData employee;
+    private final StoreData store;
 
     private CardLayout cardLayout;
     private JPanel contentPanel;
 
+    // Models pour pouvoir refresh
+    private final DefaultTableModel inventoryTableModel =
+            new DefaultTableModel(new String[]{"ID", "Nom", "Prix (€)", "Quantité"}, 0);
+
+    private final DefaultTableModel stockTableModel =
+            new DefaultTableModel(new String[]{"ID", "Nom", "Quantité"}, 0);
+
+    private final DefaultListModel<String> employeesListModel = new DefaultListModel<>();
+
+    // Tables/list pour accéder aux sélections
+    private JTable inventoryTable;
+    private JTable stockTable;
+    private JList<String> employeesList;
+
+    // Data en mémoire
+    private List<ItemData> inventoryItems = new ArrayList<>();
+    private List<ItemData> stockItems = new ArrayList<>();
+
     public EmployeeDashboard(UserData employee, StoreData store) {
+        this.employee = employee;
+        this.store = store;
+
         setTitle("Employee Dashboard - " + employee.getPseudo());
         setSize(1000, 600);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -26,11 +55,10 @@ class EmployeeDashboard extends JFrame {
         topBar.setBackground(new Color(0, 102, 102));
         topBar.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        JLabel title = new JLabel("EMPLOYEE DASHBOARD");
+        JLabel title = new JLabel("EMPLOYEE DASHBOARD - Store: " + store.getName());
         title.setForeground(Color.WHITE);
         title.setFont(new Font("Arial", Font.BOLD, 22));
 
-        // Logout Button
         JButton logoutButton = createButton("Se déconnecter", e -> logout());
 
         topBar.add(title, BorderLayout.WEST);
@@ -64,10 +92,25 @@ class EmployeeDashboard extends JFrame {
 
         add(contentPanel, BorderLayout.CENTER);
 
-        // ===== ACTIONS (UI ONLY) =====
-        btnInventory.addActionListener(e -> cardLayout.show(contentPanel, "INVENTORY"));
-        btnStock.addActionListener(e -> cardLayout.show(contentPanel, "STOCK"));
-        btnEmployees.addActionListener(e -> cardLayout.show(contentPanel, "EMPLOYEES"));
+        // ===== ACTIONS =====
+        btnInventory.addActionListener(e -> {
+            refreshInventory();
+            cardLayout.show(contentPanel, "INVENTORY");
+        });
+
+        btnStock.addActionListener(e -> {
+            refreshStock();
+            cardLayout.show(contentPanel, "STOCK");
+        });
+
+        btnEmployees.addActionListener(e -> {
+            refreshEmployees();
+            cardLayout.show(contentPanel, "EMPLOYEES");
+        });
+
+        // Default view
+        refreshInventory();
+        cardLayout.show(contentPanel, "INVENTORY");
 
         setVisible(true);
     }
@@ -80,18 +123,37 @@ class EmployeeDashboard extends JFrame {
         JLabel label = new JLabel("Inventaire du store");
         label.setFont(new Font("Arial", Font.BOLD, 18));
 
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{
-                        {1, "iPhone 15", 999.99, 12},
-                        {2, "AirPods Pro", 279.99, 30}
-                },
-                new String[]{"ID", "Nom", "Prix (€)", "Quantité"}
-        ));
+        inventoryTable = new JTable(inventoryTableModel);
+        inventoryTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
-        panel.add(label, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.addActionListener(e -> refreshInventory());
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(label, BorderLayout.WEST);
+        top.add(refreshBtn, BorderLayout.EAST);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(inventoryTable), BorderLayout.CENTER);
 
         return panel;
+    }
+
+    private void refreshInventory() {
+        inventoryTableModel.setRowCount(0);
+        try {
+            inventoryItems = InventoryLogique.getInventory(employee, store.getId());
+            for (ItemData i : inventoryItems) {
+                inventoryTableModel.addRow(new Object[]{
+                        i.getId(),
+                        i.getName(),
+                        i.getPrice(),
+                        i.getStock()
+                });
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // ===== STOCK MANAGEMENT =====
@@ -102,26 +164,61 @@ class EmployeeDashboard extends JFrame {
         JLabel label = new JLabel("Modifier le stock");
         label.setFont(new Font("Arial", Font.BOLD, 18));
 
-        JTable table = new JTable(new DefaultTableModel(
-                new Object[][]{
-                        {1, "iPhone 15", 12},
-                        {2, "AirPods Pro", 30}
-                },
-                new String[]{"ID", "Nom", "Quantité"}
-        ));
+        stockTable = new JTable(stockTableModel);
+        stockTable.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
 
         JPanel buttons = new JPanel();
-        JButton btnPlus = new JButton("+");
-        JButton btnMinus = new JButton("-");
+        JButton btnPlus = new JButton("+1");
+        JButton btnMinus = new JButton("-1");
+        JButton btnRefresh = new JButton("Refresh");
 
-        buttons.add(btnPlus);
+        btnPlus.addActionListener(e -> changeSelectedStock(+1));
+        btnMinus.addActionListener(e -> changeSelectedStock(-1));
+        btnRefresh.addActionListener(e -> refreshStock());
+
         buttons.add(btnMinus);
+        buttons.add(btnPlus);
+        buttons.add(btnRefresh);
 
         panel.add(label, BorderLayout.NORTH);
-        panel.add(new JScrollPane(table), BorderLayout.CENTER);
+        panel.add(new JScrollPane(stockTable), BorderLayout.CENTER);
         panel.add(buttons, BorderLayout.SOUTH);
 
         return panel;
+    }
+
+    private void refreshStock() {
+        stockTableModel.setRowCount(0);
+        try {
+            stockItems = InventoryLogique.getInventory(employee, store.getId());
+            for (ItemData i : stockItems) {
+                stockTableModel.addRow(new Object[]{
+                        i.getId(),
+                        i.getName(),
+                        i.getStock()
+                });
+            }
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void changeSelectedStock(int delta) {
+        int row = stockTable.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Sélectionnez un produit.", "Info", JOptionPane.INFORMATION_MESSAGE);
+            return;
+        }
+
+        int itemId = (int) stockTableModel.getValueAt(row, 0);
+
+        try {
+            InventoryLogique.changeStock(employee, store.getId(), itemId, delta);
+            refreshStock();
+            refreshInventory();
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
     }
 
     // ===== EMPLOYEES LIST =====
@@ -132,18 +229,35 @@ class EmployeeDashboard extends JFrame {
         JLabel label = new JLabel("Employés ayant accès au store");
         label.setFont(new Font("Arial", Font.BOLD, 18));
 
-        JList<String> list = new JList<>(new String[]{
-                "Alice (employee)",
-                "Bob (employee)",
-                "Admin (admin)"
-        });
+        employeesList = new JList<>(employeesListModel);
 
-        panel.add(label, BorderLayout.NORTH);
-        panel.add(new JScrollPane(list), BorderLayout.CENTER);
+        JButton refreshBtn = new JButton("Refresh");
+        refreshBtn.addActionListener(e -> refreshEmployees());
+
+        JPanel top = new JPanel(new BorderLayout());
+        top.add(label, BorderLayout.WEST);
+        top.add(refreshBtn, BorderLayout.EAST);
+
+        panel.add(top, BorderLayout.NORTH);
+        panel.add(new JScrollPane(employeesList), BorderLayout.CENTER);
 
         return panel;
     }
 
+    private void refreshEmployees() {
+        employeesListModel.clear();
+        try {
+            List<UserData> list = StoreLogique.listEmployeesWithAccess(employee, store.getId());
+            for (UserData u : list) {
+                employeesListModel.addElement(u.getPseudo() + " (" + u.getRole() + ")");
+            }
+        } catch (Exception ex) {
+            // Si tu veux afficher l'erreur au lieu du fallback, remplace par JOptionPane
+            employeesListModel.addElement("Accès refusé (réservé à l'admin)");
+        }
+    }
+
+    // ===== UI BUTTON STYLE =====
     private JButton createButton(String text) {
         JButton button = new JButton(text);
         button.setFont(new Font("Arial", Font.BOLD, 14));
@@ -167,20 +281,21 @@ class EmployeeDashboard extends JFrame {
         return button;
     }
 
-
-    // ===== Surcharge : bouton avec ActionListener =====
     private JButton createButton(String text, java.awt.event.ActionListener action) {
-        JButton button = createButton(text); // style identique
-        button.addActionListener(action);     // ajoute l'action
+        JButton button = createButton(text);
+        button.addActionListener(action);
         return button;
     }
 
-    // ===== Déconnexion =====
+    // ===== LOGOUT =====
     private void logout() {
-        int confirm = JOptionPane.showConfirmDialog(this, "Voulez-vous vraiment vous déconnecter ?", "Déconnexion", JOptionPane.YES_NO_OPTION);
-        if(confirm == JOptionPane.YES_OPTION) {
-            dispose(); // ferme le dashboard
-            // ici tu peux rouvrir la fenêtre de login si tu en as une
+        int confirm = JOptionPane.showConfirmDialog(this,
+                "Voulez-vous vraiment vous déconnecter ?",
+                "Déconnexion",
+                JOptionPane.YES_NO_OPTION);
+
+        if (confirm == JOptionPane.YES_OPTION) {
+            dispose();
             new Login().setVisible(true);
         }
     }
